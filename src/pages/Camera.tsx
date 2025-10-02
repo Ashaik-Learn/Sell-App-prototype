@@ -1,31 +1,69 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Camera as CameraIcon, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { Camera } from "@capacitor/camera";
+import { CameraResultType, CameraSource } from "@capacitor/camera";
 
-const Camera = () => {
+const CameraPage = () => {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleImageCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setCapturedImage(reader.result as string);
-        toast({
-          title: "Photo captured!",
-          description: "Analyzing item...",
-        });
-        // Navigate to review after a short delay to simulate AI processing
-        setTimeout(() => {
-          navigate("/review", { state: { image: reader.result as string } });
-        }, 1500);
-      };
-      reader.readAsDataURL(file);
+  const takePicture = async () => {
+    try {
+      const image = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.Base64,
+        source: CameraSource.Camera,
+      });
+
+      const base64Image = `data:image/${image.format};base64,${image.base64String}`;
+      setCapturedImage(base64Image);
+      
+      toast({
+        title: "Photo captured!",
+        description: "Analyzing item with AI...",
+      });
+
+      navigate("/review", { state: { image: base64Image } });
+    } catch (error) {
+      console.error("Error taking picture:", error);
+      toast({
+        title: "Error",
+        description: "Failed to take picture. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const uploadFromGallery = async () => {
+    try {
+      const image = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.Base64,
+        source: CameraSource.Photos,
+      });
+
+      const base64Image = `data:image/${image.format};base64,${image.base64String}`;
+      setCapturedImage(base64Image);
+      
+      toast({
+        title: "Photo selected!",
+        description: "Analyzing item with AI...",
+      });
+
+      navigate("/review", { state: { image: base64Image } });
+    } catch (error) {
+      console.error("Error selecting photo:", error);
+      toast({
+        title: "Error",
+        description: "Failed to select photo. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -33,9 +71,9 @@ const Camera = () => {
     <div className="min-h-screen bg-gradient-hero flex flex-col">
       <header className="p-6 pb-4">
         <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-          SellSnap
+          Sell App
         </h1>
-        <p className="text-muted-foreground mt-1">AI-powered selling assistant</p>
+        <p className="text-muted-foreground mt-1">Selling now made simple</p>
       </header>
 
       <main className="flex-1 flex flex-col items-center justify-center p-6 pb-24">
@@ -56,7 +94,7 @@ const Camera = () => {
 
           <div className="space-y-3">
             <Button
-              onClick={() => fileInputRef.current?.click()}
+              onClick={takePicture}
               size="lg"
               className="w-full h-14 text-lg font-semibold bg-gradient-primary hover:shadow-glow transition-all"
             >
@@ -65,7 +103,7 @@ const Camera = () => {
             </Button>
 
             <Button
-              onClick={() => fileInputRef.current?.click()}
+              onClick={uploadFromGallery}
               variant="outline"
               size="lg"
               className="w-full h-14 text-lg font-semibold"
@@ -74,19 +112,10 @@ const Camera = () => {
               Upload from Gallery
             </Button>
           </div>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={handleImageCapture}
-            className="hidden"
-          />
         </div>
       </main>
     </div>
   );
 };
 
-export default Camera;
+export default CameraPage;

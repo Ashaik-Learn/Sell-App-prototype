@@ -5,24 +5,55 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const Review = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const image = location.state?.image;
+  const { toast } = useToast();
 
   const [description, setDescription] = useState("");
   const [isGenerating, setIsGenerating] = useState(true);
+  const [priceRange, setPriceRange] = useState({ low: 0, recommended: 0, high: 0 });
+  const [category, setCategory] = useState("");
+  const [condition, setCondition] = useState("");
 
   useEffect(() => {
-    // Simulate AI generation
-    setTimeout(() => {
-      setDescription(
-        "Gently used vintage denim jacket in excellent condition. Classic blue wash with button-front closure and chest pockets. Perfect for casual wear, fits true to size. No stains or tears, only minor signs of wear that add to its authentic vintage character."
-      );
-      setIsGenerating(false);
-    }, 2000);
-  }, []);
+    if (!image) return;
+
+    const analyzeImage = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("analyze-item", {
+          body: { imageBase64: image },
+        });
+
+        if (error) throw error;
+
+        setDescription(data.description);
+        setCategory(data.category);
+        setCondition(data.condition);
+        setPriceRange(data.priceRange);
+        setIsGenerating(false);
+      } catch (error) {
+        console.error("Error analyzing image:", error);
+        toast({
+          title: "Analysis failed",
+          description: "Using default values. Please edit as needed.",
+          variant: "destructive",
+        });
+        // Fallback values
+        setDescription("High-quality item in good condition. Edit this description to add more details.");
+        setPriceRange({ low: 20, recommended: 35, high: 50 });
+        setCategory("General");
+        setCondition("Good");
+        setIsGenerating(false);
+      }
+    };
+
+    analyzeImage();
+  }, [image, toast]);
 
   if (!image) {
     navigate("/");
@@ -81,22 +112,29 @@ const Review = () => {
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-muted rounded-xl p-3 text-center">
               <p className="text-xs text-muted-foreground mb-1">Low</p>
-              <p className="text-lg font-bold">$25</p>
+              <p className="text-lg font-bold">${priceRange.low}</p>
             </div>
             <div className="bg-gradient-accent rounded-xl p-3 text-center shadow-accent">
               <p className="text-xs text-accent-foreground/80 mb-1">Recommended</p>
-              <p className="text-lg font-bold text-accent-foreground">$35</p>
+              <p className="text-lg font-bold text-accent-foreground">${priceRange.recommended}</p>
             </div>
             <div className="bg-muted rounded-xl p-3 text-center">
               <p className="text-xs text-muted-foreground mb-1">High</p>
-              <p className="text-lg font-bold">$45</p>
+              <p className="text-lg font-bold">${priceRange.high}</p>
             </div>
           </div>
+
+          {category && condition && (
+            <div className="flex gap-2">
+              <Badge variant="secondary">{category}</Badge>
+              <Badge variant="outline">{condition}</Badge>
+            </div>
+          )}
 
           <div className="flex items-start gap-2 bg-success/10 rounded-lg p-3">
             <TrendingUp className="h-4 w-4 text-success mt-0.5" />
             <p className="text-sm text-success-foreground">
-              Similar items sold for $32-$38 in the last 30 days
+              AI-powered price analysis based on similar items
             </p>
           </div>
         </Card>

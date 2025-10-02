@@ -1,4 +1,4 @@
-import { Camera, FileText, TrendingUp } from "lucide-react";
+import { Camera, FileText, User } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
@@ -8,8 +8,8 @@ const BottomNav = () => {
 
   const navItems = [
     { icon: Camera, label: "Capture", path: "/" },
-    { icon: FileText, label: "Listings", path: "/post" },
-    { icon: TrendingUp, label: "Earnings", path: "/earnings" },
+    { icon: FileText, label: "My Listings", path: "/post" },
+    { icon: User, label: "Profile", path: "/profile" },
   ];
 
   return (
